@@ -13,13 +13,13 @@ class GroupLoanWeeklyCollectionReport < ActiveRecord::Base
 		return new_object
 	end
 
-	def print_object
+	def mark_as_printed 
 		self.print_date = DateTime.now 
 		self.is_printed = true 
 		self.save 
 	end
 
-	def self.extract_from_server( )
+	def self.get_auth_token
 		response = HTTParty.post( "http://neo-sikki.herokuapp.com/api2/users/sign_in" ,
 		  { 
 		    :body => {
@@ -28,11 +28,26 @@ class GroupLoanWeeklyCollectionReport < ActiveRecord::Base
 		  })
 
 		server_response =  JSON.parse(response.body )
+		server_response["auth_token"]
+	end
 
-		auth_token  = server_response["auth_token"]
+	def extract_details_from_server
+		auth_token  = self.class.get_auth_token 
 
-		# try to get the shite
+		response = HTTParty.get( "http://neo-sikki.herokuapp.com/api2/group_loan_weekly_collection_reports/#{self.server_id}" ,
+		  :query => {
+		  	:auth_token => auth_token
+		  })
 
+		server_response =  JSON.parse(response.body )
+		result_array = []
+
+		server_response["group_loan_weekly_collection_report_details"]  
+	end
+
+	def self.extract_from_server( )
+		
+		auth_token  =  self.get_auth_token 
 		response = HTTParty.get( "http://neo-sikki.herokuapp.com/api2/group_loan_weekly_collection_reports" ,
 		  :query => {
 		  	:page => 1,
